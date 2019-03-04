@@ -4,14 +4,16 @@ import com.saucelabs.common.SauceOnDemandAuthentication;
 
 import org.junit.*;
 import org.junit.rules.TestName;
+import org.junit.rules.TestWatcher;
 import org.junit.runner.RunWith;
+import org.junit.runner.Description;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.remote.CapabilityType;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import com.saucelabs.junit.ConcurrentParameterized;
-import com.saucelabs.junit.SauceOnDemandTestWatcher;
+//import com.saucelabs.junit.SauceOnDemandTestWatcher;
 
 import java.net.URL;
 import java.util.LinkedList;
@@ -32,6 +34,32 @@ import com.saucelabs.common.SauceOnDemandSessionIdProvider;
 @RunWith(ConcurrentParameterized.class)
 public class TestBase implements SauceOnDemandSessionIdProvider {
 
+    public class SauceOnDemandTestWatcher extends TestWatcher {
+        private final SauceOnDemandSessionIdProvider sessionIdProvider;
+
+        public SauceOnDemandTestWatcher(SauceOnDemandSessionIdProvider sessionIdProvider) {
+            this.sessionIdProvider = sessionIdProvider;
+        }
+
+        protected void succeeded(Description description) {
+            if (this.sessionIdProvider.getSessionId() != null) {
+                printSessionId(description);
+            }
+        }
+
+        protected void failed(Throwable e, Description description) {
+            if (this.sessionIdProvider.getSessionId() != null) {
+                printSessionId(description);
+            }
+        }
+        
+        private void printSessionId(Description description) {
+            String message = String.format("SauceOnDemandSessionID=%1$s job-name=%2$s.%3$s", this.sessionIdProvider.getSessionId(), description.getClassName(), description.getMethodName());
+            System.out.println(message);
+        }
+    };
+
+
     public static String username = System.getenv("SAUCE_USERNAME");
     public static String accesskey = System.getenv("SAUCE_ACCESS_KEY");
     public static String seleniumURI;
@@ -46,7 +74,7 @@ public class TestBase implements SauceOnDemandSessionIdProvider {
      * JUnit Rule which will mark the Sauce Job as passed/failed when the test succeeds or fails.
      */
     @Rule
-    public SauceOnDemandTestWatcher resultReportingTestWatcher = new SauceOnDemandTestWatcher(this, authentication);
+    public SauceOnDemandTestWatcher resultReportingTestWatcher = new SauceOnDemandTestWatcher(this);
 
     @Rule
     public TestName name = new TestName() {
@@ -148,7 +176,8 @@ public class TestBase implements SauceOnDemandSessionIdProvider {
     @BeforeClass
     public static void setupClass() {
         //get the uri to send the commands to.
-        seleniumURI = "@ondemand.saucelabs.com:443";
+        //seleniumURI = "@ondemand.saucelabs.com:443"; // US
+        seleniumURI = "@ondemand.eu-central-1.saucelabs.com:443"; // EU
         //If available add build tag. When running under Jenkins BUILD_TAG is automatically set.
         //You can set this manually on manual runs.
         buildTag = System.getenv("BUILD_TAG");
